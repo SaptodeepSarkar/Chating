@@ -1,0 +1,18 @@
+[
+  {
+    "senderId": "9a84106e-656f-4542-818b-e8afd399c42c",
+    "receiverId": "a74dc0ae-6866-4497-8d98-f6ef0fc1512f",
+    "content": "Hello from user 1!",
+    "id": "424666e6-83c4-4bff-a34c-e7dd9bab8ab1",
+    "timestamp": "2025-10-26T13:07:45.633Z",
+    "read": false
+  },
+  {
+    "senderId": "a74dc0ae-6866-4497-8d98-f6ef0fc1512f",
+    "receiverId": "9a84106e-656f-4542-818b-e8afd399c42c",
+    "content": "Hi! This is user 2 responding",
+    "id": "44f5b843-2511-41fd-ba75-bcb0ffb943e3",
+    "timestamp": "2025-10-26T13:08:34.463Z",
+    "read": false
+  }
+]
