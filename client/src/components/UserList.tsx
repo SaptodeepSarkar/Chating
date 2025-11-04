@@ -15,12 +15,35 @@ interface UserListProps {
 export function UserList({ users, currentUserId, selectedUserId, onSelectUser }: UserListProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
+  const formatLastSeen = (lastSeen: Date | null) => {
+    if (!lastSeen) return "Never";
+    
+    const now = new Date();
+    const lastSeenDate = new Date(lastSeen);
+    const diffInMinutes = Math.floor((now.getTime() - lastSeenDate.getTime()) / (1000 * 60));
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInDays = Math.floor(diffInHours / 24);
+    
+    if (diffInMinutes < 1) return "Just now";
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    if (diffInDays < 7) return `${diffInDays}d ago`;
+    
+    return lastSeenDate.toLocaleDateString();
+  };
+
   const filteredUsers = useMemo(() => {
     return users
       .filter((user) => user.id !== currentUserId)
       .filter((user) =>
         user.username.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      )
+      .sort((a, b) => {
+        // Sort by online status first, then by unread count, then by username
+        if (a.online !== b.online) return a.online ? -1 : 1;
+        if (a.unreadCount !== b.unreadCount) return (b.unreadCount || 0) - (a.unreadCount || 0);
+        return a.username.localeCompare(b.username);
+      });
   }, [users, currentUserId, searchQuery]);
 
   return (
@@ -61,13 +84,13 @@ export function UserList({ users, currentUserId, selectedUserId, onSelectUser }:
                     {user.username}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {user.online ? "Online" : "Offline"}
+                    {user.online ? "Online" : `Offline - last seen: ${formatLastSeen(user.lastSeen)}`}
                   </p>
                 </div>
                 {user.unreadCount && user.unreadCount > 0 && (
                   <div className="flex-shrink-0">
-                    <div className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium" data-testid={`badge-unread-${user.id}`}>
-                      {user.unreadCount}
+                    <div className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium animate-pulse" data-testid={`badge-unread-${user.id}`}>
+                      {user.unreadCount > 99 ? '99+' : user.unreadCount}
                     </div>
                   </div>
                 )}

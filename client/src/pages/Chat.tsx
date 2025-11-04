@@ -12,14 +12,16 @@ import type { User, UserWithStatus, Message } from "@shared/schema";
 interface ChatProps {
   user: User;
   onLogout: () => void;
+  onUnreadCountChange: (count: number) => void;
 }
 
-export default function Chat({ user, onLogout }: ChatProps) {
+export default function Chat({ user, onLogout, onUnreadCountChange }: ChatProps) {
   const [selectedUserId, setSelectedUserId] = useState<string>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [users, setUsers] = useState<UserWithStatus[]>([]);
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
   const { data: usersData } = useQuery<UserWithStatus[]>({
     queryKey: ["/api/users"],
@@ -28,9 +30,14 @@ export default function Chat({ user, onLogout }: ChatProps) {
 
   useEffect(() => {
     if (usersData) {
-      setUsers(usersData);
+      // Add unread counts to users
+      const usersWithUnread = usersData.map(user => ({
+        ...user,
+        unreadCount: unreadCounts[user.id] || 0
+      }));
+      setUsers(usersWithUnread);
     }
-  }, [usersData]);
+  }, [usersData, unreadCounts]);
 
   const selectedUser = users.find((u) => u.id === selectedUserId);
 
@@ -41,6 +48,8 @@ export default function Chat({ user, onLogout }: ChatProps) {
 
     socket.onopen = () => {
       socket.send(JSON.stringify({ type: "auth", userId: user.id }));
+      // Request initial unread counts
+      socket.send(JSON.stringify({ type: "getUnreadCounts" }));
     };
 
     socket.onmessage = (event) => {
@@ -48,6 +57,11 @@ export default function Chat({ user, onLogout }: ChatProps) {
       
       if (data.type === "message") {
         setMessages((prev) => [...prev, data.message]);
+        
+        // If this message is for the current user, update unread counts
+        if (data.message.receiverId === user.id) {
+          socket.send(JSON.stringify({ type: "getUnreadCounts" }));
+        }
       } else if (data.type === "userStatus") {
         setUsers((prev) =>
           prev.map((u) =>
@@ -56,6 +70,12 @@ export default function Chat({ user, onLogout }: ChatProps) {
         );
       } else if (data.type === "messages") {
         setMessages(data.messages);
+      } else if (data.type === "unreadCounts") {
+        setUnreadCounts(data.counts);
+        onUnreadCountChange(data.total);
+      } else if (data.type === "messagesRead") {
+        // Refresh unread counts when messages are read
+        socket.send(JSON.stringify({ type: "getUnreadCounts" }));
       }
     };
 
@@ -64,13 +84,41 @@ export default function Chat({ user, onLogout }: ChatProps) {
     return () => {
       socket.close();
     };
-  }, [user.id]);
+  }, [user.id, onUnreadCountChange]);
 
+  // Mark messages as read when selecting a user or when messages change
   useEffect(() => {
     if (selectedUserId && ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: "getMessages", otherUserId: selectedUserId }));
+      // Get messages for the selected user
+      ws.send(JSON.stringify({ 
+        type: "getMessages", 
+        otherUserId: selectedUserId
+      }));
+
+      // Mark all messages from this user as read
+      ws.send(JSON.stringify({
+        type: "markMessagesRead",
+        senderId: selectedUserId
+      }));
     }
   }, [selectedUserId, ws]);
+
+  // Also mark as read when new messages come in for the selected user
+  useEffect(() => {
+    if (selectedUserId && ws && ws.readyState === WebSocket.OPEN && messages.length > 0) {
+      // Check if there are any unread messages from the selected user
+      const hasUnreadFromSelected = messages.some(
+        msg => msg.senderId === selectedUserId && msg.receiverId === user.id && !msg.read
+      );
+      
+      if (hasUnreadFromSelected) {
+        ws.send(JSON.stringify({
+          type: "markMessagesRead",
+          senderId: selectedUserId
+        }));
+      }
+    }
+  }, [messages, selectedUserId, user.id, ws]);
 
   const handleSendMessage = useCallback(
     async (content: string, file?: File) => {
@@ -120,6 +168,20 @@ export default function Chat({ user, onLogout }: ChatProps) {
     [handleSendMessage]
   );
 
+  const handleUnsendMessage = useCallback(
+    async (messageId: string, receiverId: string) => {
+      try {
+        const response = await apiRequest("DELETE", `/api/messages/${messageId}`);
+        if (response.ok) {
+          setMessages(prev => prev.filter(msg => msg.id !== messageId));
+        }
+      } catch (error) {
+        console.error("Failed to unsend message:", error);
+      }
+    },
+    []
+  );
+
   const conversationMessages = messages.filter(
     (msg) =>
       (msg.senderId === user.id && msg.receiverId === selectedUserId) ||
@@ -127,7 +189,7 @@ export default function Chat({ user, onLogout }: ChatProps) {
   );
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background max-w-[1920px] mx-auto">
       <div
         className={cn(
           "w-80 border-r bg-card flex flex-col transition-all lg:relative absolute inset-y-0 left-0 z-40",
@@ -191,6 +253,7 @@ export default function Chat({ user, onLogout }: ChatProps) {
           messages={conversationMessages}
           onSendMessage={handleSendMessage}
           onSendFile={handleSendFile}
+          onUnsendMessage={handleUnsendMessage}
         />
       </div>
     </div>

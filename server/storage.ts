@@ -18,10 +18,17 @@ export interface IStorage {
   createMessage(message: InsertMessage): Promise<Message>;
   getMessagesBetweenUsers(userId1: string, userId2: string): Promise<Message[]>;
   getAllMessages(): Promise<Message[]>;
+  deleteMessage(messageId: string, userId: string): Promise<boolean>;
+  unsendMessage(messageId: string, userId: string): Promise<boolean>; // New method for unsend
   
   createFile(file: InsertFile): Promise<File>;
   getFilesByUser(userId: string): Promise<File[]>;
   getAllFiles(): Promise<File[]>;
+  
+  // New methods for notifications
+  markMessagesAsRead(senderId: string, receiverId: string): Promise<void>;
+  getUnreadCount(userId: string): Promise<number>;
+  getUnreadCountsForUser(userId: string): Promise<Map<string, number>>;
 }
 
 async function ensureDataDir() {
@@ -128,6 +135,7 @@ export class JSONStorage implements IStorage {
       id: randomUUID(),
       timestamp: new Date(),
       read: false,
+      isUnsent: false, // Default to false
     };
     this.messages.push(message);
     await this.saveMessages();
@@ -138,14 +146,47 @@ export class JSONStorage implements IStorage {
     await this.init();
     return this.messages.filter(
       (msg) =>
-        (msg.senderId === userId1 && msg.receiverId === userId2) ||
-        (msg.senderId === userId2 && msg.receiverId === userId1)
+        ((msg.senderId === userId1 && msg.receiverId === userId2) ||
+        (msg.senderId === userId2 && msg.receiverId === userId1)) &&
+        !msg.isUnsent // Don't return unsent messages
     ).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
   }
 
   async getAllMessages(): Promise<Message[]> {
     await this.init();
     return this.messages;
+  }
+
+  async deleteMessage(messageId: string, userId: string): Promise<boolean> {
+    await this.init();
+    const messageIndex = this.messages.findIndex(
+      (msg) => msg.id === messageId && msg.senderId === userId
+    );
+    
+    if (messageIndex === -1) {
+      return false;
+    }
+    
+    this.messages.splice(messageIndex, 1);
+    await this.saveMessages();
+    return true;
+  }
+
+  // New unsend method - marks message as unsent instead of deleting
+  async unsendMessage(messageId: string, userId: string): Promise<boolean> {
+    await this.init();
+    const message = this.messages.find(
+      (msg) => msg.id === messageId && msg.senderId === userId
+    );
+    
+    if (!message) {
+      return false;
+    }
+    
+    // Mark message as unsent instead of deleting
+    message.isUnsent = true;
+    await this.saveMessages();
+    return true;
   }
 
   async createFile(insertFile: InsertFile): Promise<File> {
@@ -168,6 +209,44 @@ export class JSONStorage implements IStorage {
   async getAllFiles(): Promise<File[]> {
     await this.init();
     return this.files;
+  }
+
+  // New notification methods
+  async markMessagesAsRead(senderId: string, receiverId: string): Promise<void> {
+    await this.init();
+    let hasChanges = false;
+    
+    this.messages.forEach(msg => {
+      if (msg.senderId === senderId && msg.receiverId === receiverId && !msg.read && !msg.isUnsent) {
+        msg.read = true;
+        hasChanges = true;
+      }
+    });
+    
+    if (hasChanges) {
+      await this.saveMessages();
+    }
+  }
+
+  async getUnreadCount(userId: string): Promise<number> {
+    await this.init();
+    return this.messages.filter(msg => 
+      msg.receiverId === userId && !msg.read && !msg.isUnsent
+    ).length;
+  }
+
+  async getUnreadCountsForUser(userId: string): Promise<Map<string, number>> {
+    await this.init();
+    const unreadCounts = new Map<string, number>();
+    
+    this.messages.forEach(msg => {
+      if (msg.receiverId === userId && !msg.read && !msg.isUnsent) {
+        const senderId = msg.senderId;
+        unreadCounts.set(senderId, (unreadCounts.get(senderId) || 0) + 1);
+      }
+    });
+    
+    return unreadCounts;
   }
 }
 

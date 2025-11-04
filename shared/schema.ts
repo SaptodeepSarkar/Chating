@@ -1,3 +1,4 @@
+// shared/schema.ts
 import { sql } from "drizzle-orm";
 import { pgTable, text, varchar, timestamp, boolean, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
@@ -22,6 +23,7 @@ export const messages = pgTable("messages", {
   fileSize: integer("file_size"),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
   read: boolean("read").default(false).notNull(),
+  isUnsent: boolean("is_unsent").default(false).notNull(),
 });
 
 export const files = pgTable("files", {
@@ -43,6 +45,7 @@ export const insertMessageSchema = createInsertSchema(messages).omit({
   id: true,
   timestamp: true,
   read: true,
+  isUnsent: true,
 });
 
 export const insertFileSchema = createInsertSchema(files).omit({

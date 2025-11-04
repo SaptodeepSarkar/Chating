@@ -17,15 +17,19 @@ export function MessageBubble({ message, isSent, senderUsername }: MessageBubble
 
   return (
     <div
-      className={cn("flex gap-2 max-w-lg animate-in fade-in slide-in-from-bottom-2 duration-200", isSent ? "ml-auto" : "mr-auto")}
+      className={cn(
+        "flex gap-2 animate-in fade-in slide-in-from-bottom-2 duration-200",
+        isSent ? "ml-auto" : "mr-auto",
+        "w-fit max-w-[85%] md:max-w-[65%]"
+      )}
       data-testid={`message-${message.id}`}
     >
-      <div className={cn("flex flex-col gap-1", isSent && "items-end")}>
+      <div className={cn("flex flex-col gap-1 w-full", isSent && "items-end")}>
         {message.fileUrl && (
           <FilePreview
             fileName={message.fileName || "file"}
-            fileType={message.fileType}
-            fileSize={message.fileSize}
+            fileType={message.fileType || undefined}
+            fileSize={message.fileSize || undefined}
             fileUrl={message.fileUrl}
             variant="message"
           />
