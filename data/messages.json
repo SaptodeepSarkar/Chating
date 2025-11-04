@@ -851,7 +851,7 @@
     "content": "Mc",
     "id": "2eae5e63-9b14-47f6-9b3e-1fe1e81b58f3",
     "timestamp": "2025-11-04T11:26:03.697Z",
-    "read": false,
+    "read": true,
     "isUnsent": false
   },
   {
@@ -860,7 +860,7 @@
     "content": "😤",
     "id": "64c43407-b54a-4434-9d94-3470eda26abe",
     "timestamp": "2025-11-04T11:26:25.740Z",
-    "read": false,
+    "read": true,
     "isUnsent": false
   },
   {
@@ -869,7 +869,7 @@
     "content": "Tum gdu ho",
     "id": "39165a2d-9aaa-494c-a7e4-d7e1f8093a8d",
     "timestamp": "2025-11-04T11:27:07.747Z",
-    "read": false,
+    "read": true,
     "isUnsent": false
   },
   {
@@ -878,7 +878,7 @@
     "content": "Kon hai dummy",
     "id": "1f5c3785-b614-42b7-9d06-878ad100b84d",
     "timestamp": "2025-11-04T11:27:43.109Z",
-    "read": false,
+    "read": true,
     "isUnsent": false
   },
   {
@@ -887,6 +887,24 @@
     "content": "Jao didi se baat karo",
     "id": "42f889af-2d1b-483e-b350-70935404497c",
     "timestamp": "2025-11-04T11:28:19.788Z",
+    "read": true,
+    "isUnsent": false
+  },
+  {
+    "senderId": "b806c07e-9331-4748-b567-eaa7e029fb07",
+    "receiverId": "ca5b0ba0-5fb8-4034-ac18-bd4a2274f661",
+    "content": "mader chod hamara app ma notification nahi ha abhi",
+    "id": "a3504548-0fae-4331-983f-f4f4787226c5",
+    "timestamp": "2025-11-04T13:35:16.892Z",
+    "read": false,
+    "isUnsent": false
+  },
+  {
+    "senderId": "b806c07e-9331-4748-b567-eaa7e029fb07",
+    "receiverId": "ca5b0ba0-5fb8-4034-ac18-bd4a2274f661",
+    "content": "aur ham server testing ka liya band kar diya tha",
+    "id": "91614b34-38f7-4383-8b74-48d896cea59f",
+    "timestamp": "2025-11-04T13:35:28.112Z",
     "read": false,
     "isUnsent": false
   }
